@@ -24,13 +24,16 @@ int key[NUM_COLUMNS][NUM_ROWS] = {
   { 3, 6, 9, -2 },
 };
 
-String serviceProvider = String("FeMAp");
+String serviceProvider = String("FeMAp//2k");
 bool isRinging = false;
 String callerId;
 
 int sMeter = -1;
 int reading = -99;  // @todo: rename, unclear
 bool isPickedUp = false;
+
+unsigned long headsetInterruptTriggeredAt;
+#define HEADSET_INTERRUPT_BOUNCE_TIME 50
 
 void setup() {
   pinMode(D6, OUTPUT);  // Keypad C1
@@ -57,18 +60,20 @@ void setup() {
   oled.println("FeMAp//2k");
   oled.display();
 
+  delay(2500);
+
   oled.setCursor(0, 20);
 
   isPickedUp = digitalRead(D22);
-  attachInterrupt(D22, handleHeadset, CHANGE);
+  attachInterrupt(D22, handleHeadsetInterrupt, CHANGE);
 
   oled.setTextSize(1);
   refreshDisplay();
 
   timer.in(5000, requestStatus);
   timer.in(10000, requestBoardInfo);
-  timer.in(15000, requestServiceProvider);
-  timer.every(20000, requestSignalStatus);
+  timer.in(13000, requestServiceProvider);
+  timer.every(15000, requestSignalStatus);
 
   sMeter = -1;
 }
@@ -95,8 +100,6 @@ void loop() {
       if (buttonPressed) {
         reading = value;
         Serial.println(value);
-        //oled.print(value);
-        //oled.display();
       }
       delay(2);
     }
@@ -109,6 +112,18 @@ void loop() {
     Serial1.write(Serial.read());
   }
 
+  String message;
+  while (Serial1.available()) {
+    message = Serial1.readStringUntil('\n');
+    Serial.println(message);
+
+    if (handleModemMessage(message)) {
+      refreshDisplay();
+    }
+
+    delay(10);
+  }
+
   delay(10);
 }
 
@@ -119,14 +134,15 @@ void refreshDisplay() {
 
   drawIncomingCall();
 
+  drawHeadsetState();
+
   oled.display();
 }
 
-void serialEvent1() {
+/*void serialEvent1() {
   String message;
 
   while (Serial1.available()) {
-    //message += (char)Serial1.read();
     message = Serial1.readStringUntil('\n');
     Serial.println(message);
 
@@ -134,14 +150,27 @@ void serialEvent1() {
       refreshDisplay();
     }
 
-    delay(2);  // Allow the Serial buffer to fill up
+    delay(10);  // Allow the Serial buffer to fill up
   }
+}*/
+
+void handleHeadsetInterrupt() {
+  // debouncing logic
+  if (headsetInterruptTriggeredAt > (millis() - HEADSET_INTERRUPT_BOUNCE_TIME)) {
+    return;
+  }
+
+  headsetInterruptTriggeredAt = millis();
+  timer.in(HEADSET_INTERRUPT_BOUNCE_TIME + 1, handleHeadset);
 }
 
-void handleHeadset() {
+bool handleHeadset(void *) {
   bool state = digitalRead(D22);
   Serial.println(state ? "Headset picked up" : "Headset hung up");
   isPickedUp = state;
+  refreshDisplay();
+
+  return false;
 }
 
 bool requestStatus(void *) {
@@ -159,6 +188,8 @@ bool requestBoardInfo(void *) {
 }
 
 bool requestSignalStatus(void *) {
+  if (isRinging) return true;
+
   Serial.println("Requesting AT+CSQ");
   Serial1.println("AT+CSQ");
 

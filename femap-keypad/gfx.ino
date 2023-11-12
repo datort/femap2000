@@ -61,6 +61,14 @@ void drawIncomingCall() {
 
   oled.setCursor(0, 30);
   oled.print("Incoming call");
-  oled.setCursor(0, 40);
-  oled.print(callerId);
+
+  if (callerId.startsWith("+")) {
+    oled.setCursor(0, 40);
+    oled.print(callerId);
+  }
+}
+
+void drawHeadsetState() {
+  oled.setCursor(0, 55);
+  oled.print(isPickedUp ? "picked up" : "hung up");
 }

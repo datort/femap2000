@@ -33,6 +33,12 @@ bool updateServiceProvider(String message) {
 }
 
 bool handleIncomingCall() {
+  if (isPickedUp) {
+    Serial.println("Headset picked up: rejecting call");
+    Serial1.println("ATH");
+    return false;
+  }
+  
   isRinging = true;
   return true;
 }
