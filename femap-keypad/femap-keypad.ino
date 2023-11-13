@@ -3,6 +3,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <arduino-timer.h>
+#include "pitches.h"
 
 #define SCREEN_WIDTH 128     // OLED display width, in pixels
 #define SCREEN_HEIGHT 64     // OLED display height, in pixels
@@ -29,8 +30,12 @@ bool isRinging = false;
 String callerId;
 
 int sMeter = -1;
-int reading = -99;  // @todo: rename, unclear
+int reading = -99;  // @todo: rename, unclear, only temporary?
+String dialedNumber;
 bool isPickedUp = false;
+bool isActiveCall = false;
+unsigned long callStartedAt;
+unsigned long callEndedAt;
 
 unsigned long headsetInterruptTriggeredAt;
 #define HEADSET_INTERRUPT_BOUNCE_TIME 50
@@ -78,6 +83,9 @@ void setup() {
   sMeter = -1;
 }
 
+// Start up the second core
+void setup1() {}
+
 void loop() {
   timer.tick();
 
@@ -100,6 +108,14 @@ void loop() {
       if (buttonPressed) {
         reading = value;
         Serial.println(value);
+
+        if (value >= 0) {
+          dialedNumber += value;
+          refreshDisplay();
+        } else if (value == -1) {
+          dialedNumber = "";
+          playMelody();
+        }
       }
       delay(2);
     }
@@ -127,32 +143,25 @@ void loop() {
   delay(10);
 }
 
+void loop1() {
+  unsigned int taskId = rp2040.fifo.pop();
+
+  if (taskId == 1) playMelody();
+}
+
 void refreshDisplay() {
   oled.clearDisplay();
   drawServiceProvider();
   drawSMeter();
 
   drawIncomingCall();
+  drawActiveCall();
+  drawDialedNumber();
 
   drawHeadsetState();
 
   oled.display();
 }
-
-/*void serialEvent1() {
-  String message;
-
-  while (Serial1.available()) {
-    message = Serial1.readStringUntil('\n');
-    Serial.println(message);
-
-    if (handleModemMessage(message)) {
-      refreshDisplay();
-    }
-
-    delay(10);  // Allow the Serial buffer to fill up
-  }
-}*/
 
 void handleHeadsetInterrupt() {
   // debouncing logic
@@ -168,6 +177,34 @@ bool handleHeadset(void *) {
   bool state = digitalRead(D22);
   Serial.println(state ? "Headset picked up" : "Headset hung up");
   isPickedUp = state;
+
+  if (isRinging && isPickedUp && !isActiveCall) {
+    Serial1.println("ATA");
+
+    isRinging = false;
+    isActiveCall = true;
+    callStartedAt = millis();
+  }
+
+  else if (isPickedUp && dialedNumber && !isActiveCall) {
+    Serial.print("Calling: ");
+    Serial.println(dialedNumber);
+
+    Serial1.print("ATD+ +49");
+    Serial1.print(dialedNumber.startsWith("0") ? dialedNumber.substring(1) : dialedNumber);
+    Serial1.println(";");
+
+    isActiveCall = true;
+  }
+
+  else if (!isPickedUp && isActiveCall) {
+    Serial1.println("ATH");
+
+    isActiveCall = false;
+    callEndedAt = millis();
+    dialedNumber = "";
+  }
+
   refreshDisplay();
 
   return false;
@@ -201,4 +238,32 @@ bool requestServiceProvider(void *) {
   Serial1.println("AT+CSPN?");
 
   return false;
+}
+
+void playMelody() {
+  Serial.println("Playing melody");
+
+  int melody[] = {
+    NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
+  };
+
+  // note durations: 4 = quarter note, 8 = eighth note, etc.:
+  int noteDurations[] = {
+    4, 8, 8, 4, 4, 4, 4, 4
+  };
+
+  for (int thisNote = 0; thisNote < 8; thisNote++) {
+
+    // to calculate the note duration, take one second divided by the note type.
+    //e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
+    int noteDuration = 1000 / noteDurations[thisNote];
+    tone(D21, melody[thisNote], noteDuration);
+
+    // to distinguish the notes, set a minimum time between them.
+    // the note's duration + 30% seems to work well:
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    // stop the tone playing:
+    noTone(D21);
+  }
 }

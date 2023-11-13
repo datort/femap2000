@@ -38,6 +38,8 @@ bool handleIncomingCall() {
     Serial1.println("ATH");
     return false;
   }
+
+  rp2040.fifo.push_nb(1);
   
   isRinging = true;
   return true;

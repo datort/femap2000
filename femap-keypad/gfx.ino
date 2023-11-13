@@ -59,6 +59,7 @@ void drawServiceProvider() {
 void drawIncomingCall() {
   if (!isRinging) return;
 
+  oled.setTextSize(1);
   oled.setCursor(0, 30);
   oled.print("Incoming call");
 
@@ -68,7 +69,29 @@ void drawIncomingCall() {
   }
 }
 
+void drawActiveCall() {
+  if (!isActiveCall) return;
+
+  oled.setTextSize(1);
+  oled.setCursor(0, 30);
+  oled.print("Active call");
+
+  if (callerId.startsWith("+")) {
+    oled.setCursor(0, 40);
+    oled.print(callerId);
+  }
+}
+
 void drawHeadsetState() {
+  oled.setTextSize(1);
   oled.setCursor(0, 55);
   oled.print(isPickedUp ? "picked up" : "hung up");
+}
+
+void drawDialedNumber() {
+  if (!dialedNumber || isRinging || isActiveCall) return;
+
+  oled.setCursor(0, 30);
+  oled.setTextSize(2);
+  oled.print(dialedNumber);
 }
