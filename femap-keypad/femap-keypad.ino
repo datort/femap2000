@@ -25,12 +25,12 @@ int key[NUM_COLUMNS][NUM_ROWS] = {
   { 3, 6, 9, -2 },
 };
 
-String serviceProvider = String("FeMAp//2k");
+String serviceProvider = String("FeMAp 2000");
 bool isRinging = false;
 String callerId;
 
 int sMeter = -1;
-int reading = -99;  // @todo: rename, unclear, only temporary?
+int previousReading = -99;  // storing last pressed button to avoid bouncing/repeated input
 String dialedNumber;
 bool isPickedUp = false;
 bool isActiveCall = false;
@@ -39,6 +39,8 @@ unsigned long callEndedAt;
 
 unsigned long headsetInterruptTriggeredAt;
 #define HEADSET_INTERRUPT_BOUNCE_TIME 50
+
+bool snakeMode = false;
 
 void setup() {
   pinMode(D6, OUTPUT);  // Keypad C1
@@ -61,8 +63,8 @@ void setup() {
   oled.clearDisplay();
   oled.setTextSize(2);
   oled.setTextColor(SSD1306_WHITE);
-  oled.setCursor(11, 18);
-  oled.println("FeMAp//2k");
+  oled.setCursor(3, 18);
+  oled.println("FeMAp 2000");
   oled.display();
 
   delay(2500);
@@ -89,7 +91,29 @@ void setup1() {}
 void loop() {
   timer.tick();
 
-  for (int i = 0; i < NUM_COLUMNS; i++) {
+  int value = getUserInput();
+  
+  if (snakeMode) {
+    // handle input in snake
+    if (value > 0) {
+      Serial.println(value);
+    }
+  } else {
+    if (value >= 0) {
+      dialedNumber += value;
+      refreshDisplay();
+    } else if (value == -1 && dialedNumber.length() > 0) {
+      dialedNumber = "";
+      refreshDisplay();
+    } else {
+      startSnake();
+    }
+  }
+
+  
+
+
+  /*for (int i = 0; i < NUM_COLUMNS; i++) {
     digitalWrite(columns[i], HIGH);
     delay(2);
 
@@ -111,18 +135,19 @@ void loop() {
 
         if (value >= 0) {
           dialedNumber += value;
-          refreshDisplay();
-        } else if (value == -1) {
+        } else if (value == -1 && dialedNumber.length() > 0) {
           dialedNumber = "";
-          playMelody();
+        } else {
+          startSnake();
         }
+        refreshDisplay();
       }
       delay(2);
     }
 
     digitalWrite(columns[i], LOW);
     delay(2);
-  }
+  }*/
 
   while (Serial.available()) {
     Serial1.write(Serial.read());
@@ -141,6 +166,40 @@ void loop() {
   }
 
   delay(10);
+}
+
+int getUserInput() {
+  for (int i = 0; i < NUM_COLUMNS; i++) {
+    digitalWrite(columns[i], HIGH);
+    delay(2);
+
+    for (int j = 0; j < NUM_ROWS; j++) {
+      int buttonPressed = digitalRead(rows[j]);
+      int value = key[i][j];
+
+      if (!buttonPressed && value == previousReading) {
+        previousReading = -99;
+      }
+
+      if (buttonPressed && value == previousReading) {
+        continue;
+      }
+
+      if (buttonPressed) {
+        previousReading = value;
+        Serial.println(value);
+
+        return value;
+      }
+
+      delay(2);
+    }
+
+    digitalWrite(columns[i], LOW);
+    delay(2);
+  }
+
+  return -99;
 }
 
 void loop1() {
@@ -162,6 +221,8 @@ void refreshDisplay() {
 
   oled.display();
 }
+
+
 
 void handleHeadsetInterrupt() {
   // debouncing logic
@@ -186,7 +247,7 @@ bool handleHeadset(void *) {
     callStartedAt = millis();
   }
 
-  else if (isPickedUp && dialedNumber && !isActiveCall) {
+  else if (isPickedUp && dialedNumber.length() > 0 && !isActiveCall) {
     Serial.print("Calling: ");
     Serial.println(dialedNumber);
 

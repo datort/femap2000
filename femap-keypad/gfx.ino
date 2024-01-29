@@ -92,6 +92,6 @@ void drawDialedNumber() {
   if (!dialedNumber || isRinging || isActiveCall) return;
 
   oled.setCursor(0, 30);
-  oled.setTextSize(2);
+  oled.setTextSize(dialedNumber.length() > 10 ? 1 : 2);
   oled.print(dialedNumber);
 }
