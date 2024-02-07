@@ -94,10 +94,10 @@ void loop() {
   int value = getUserInput();
   
   if (snakeMode) {
-    // handle input in snake
     if (value > 0) {
-      Serial.println(value);
+      handleSnakeInput(value);
     }
+    snakeIteration();
   } else {
     if (value >= 0) {
       dialedNumber += value;
@@ -105,49 +105,11 @@ void loop() {
     } else if (value == -1 && dialedNumber.length() > 0) {
       dialedNumber = "";
       refreshDisplay();
-    } else {
+    } else if (value == -1 && dialedNumber.length() == 0) {
+      Serial.println("STARTING SNAKE MODE");
       startSnake();
     }
   }
-
-  
-
-
-  /*for (int i = 0; i < NUM_COLUMNS; i++) {
-    digitalWrite(columns[i], HIGH);
-    delay(2);
-
-    for (int j = 0; j < NUM_ROWS; j++) {
-      int buttonPressed = digitalRead(rows[j]);
-      int value = key[i][j];
-
-      if (!buttonPressed && value == reading) {
-        reading = -99;
-      }
-
-      if (buttonPressed && value == reading) {
-        continue;
-      }
-
-      if (buttonPressed) {
-        reading = value;
-        Serial.println(value);
-
-        if (value >= 0) {
-          dialedNumber += value;
-        } else if (value == -1 && dialedNumber.length() > 0) {
-          dialedNumber = "";
-        } else {
-          startSnake();
-        }
-        refreshDisplay();
-      }
-      delay(2);
-    }
-
-    digitalWrite(columns[i], LOW);
-    delay(2);
-  }*/
 
   while (Serial.available()) {
     Serial1.write(Serial.read());
@@ -169,6 +131,8 @@ void loop() {
 }
 
 int getUserInput() {
+  int detectedKeyPress = -99;
+
   for (int i = 0; i < NUM_COLUMNS; i++) {
     digitalWrite(columns[i], HIGH);
     delay(2);
@@ -187,9 +151,8 @@ int getUserInput() {
 
       if (buttonPressed) {
         previousReading = value;
+        detectedKeyPress = value;
         Serial.println(value);
-
-        return value;
       }
 
       delay(2);
@@ -199,7 +162,7 @@ int getUserInput() {
     delay(2);
   }
 
-  return -99;
+  return detectedKeyPress;
 }
 
 void loop1() {
