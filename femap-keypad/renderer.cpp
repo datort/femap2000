@@ -2,16 +2,16 @@
 #include "Arduino.h"
 #include <Adafruit_SSD1306.h>
 
-#define CELL_SIZE 4
+#define CELL_SIZE 8
 
-namespace Renderer {
+void Renderer::setDisplay(Adafruit_SSD1306 oled) {
+  this->oled = oled;
+}
 
-  //U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
+void Renderer::initFrame() {
+  this->oled.clearDisplay();
+}
 
-  /*void initialize() {
-    u8g2.begin();
-    u8g2.setFont(u8g2_font_6x10_tf);
-  }*/
 
   /*unsigned long time_total = 0;
   unsigned long time_last = 0;
@@ -21,27 +21,36 @@ namespace Renderer {
     return 1.0 / ((time_total - time_last) / 1000000.0);
   }*/
 
-  void renderBorder(Adafruit_SSD1306 oled) {
-    oled.drawRect(0, 0, 128, 64, 1);
-  }
+void Renderer::renderBorder() {
+  this->oled.drawRect(0, 0, 128, 64, 1);
+}
   
-  void renderSnake(Adafruit_SSD1306 oled, Snake *snake) {
-    const uint8_t **body = snake->getBody();
-    for(int i = 0; i < Snake::BODY_WIDTH; i++) {
-      for(int j = 0; j < Snake::BODY_HEIGHT; j++) {
-        if(body[i][j] > 0) {
-          oled.fillRect(i * CELL_SIZE, j * CELL_SIZE, CELL_SIZE, CELL_SIZE, 1);
-        }
+void Renderer::renderSnake(Snake *snake) {
+  const uint8_t **body = snake->getBody();
+  for(int i = 0; i < Snake::BODY_WIDTH; i++) {
+    for(int j = 0; j < Snake::BODY_HEIGHT; j++) {
+      if(body[i][j] > 0) {
+        this->oled.fillRect(i * CELL_SIZE, j * CELL_SIZE, CELL_SIZE, CELL_SIZE, 1);
       }
     }
   }
+}
 
-  /*void renderFruit(Fruit * fruit) {
-    Position position = fruit->getPosition();
-    u8g2.drawFrame(position.x * CELL_SIZE + 1, position.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
-  }
+void Renderer::renderFruit(Fruit * fruit) {
+  Position position = fruit->getPosition();
+  this->oled.drawTriangle(
+    position.x, 
+    position.y, 
+    position.x + 3, 
+    position.y -5, 
+    position.x + 5, 
+    position.y, 
+    1
+  );
+  //u8g2.drawFrame(position.x * CELL_SIZE + 1, position.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+}
 
-  void renderGameOver(Snake *snake) {
+  /*void renderGameOver(Snake *snake) {
     u8g2.drawBox(32, 20, 64, 22);
     u8g2.setDrawColor(0);
     u8g2.setCursor(34, 30);
@@ -54,10 +63,8 @@ namespace Renderer {
 
   void startFrame() {
     u8g2.clearBuffer();
-  }
-
-  void endFrame() {
-    u8g2.sendBuffer();
   }*/
 
+void Renderer::finishCycle() {
+  this->oled.display();
 }

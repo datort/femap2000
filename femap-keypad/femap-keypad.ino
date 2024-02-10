@@ -97,7 +97,6 @@ void loop() {
     if (value > 0) {
       handleSnakeInput(value);
     }
-    snakeIteration();
   } else {
     if (value >= 0) {
       dialedNumber += value;
