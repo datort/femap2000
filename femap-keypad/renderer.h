@@ -12,6 +12,7 @@ class Renderer {
     void initFrame();
     void renderBorder();
     void renderSnake(Snake *snake);
+    void renderGameOver(Snake *snake);
     void renderFruit(Fruit *fruit);
     void finishCycle();
   private:

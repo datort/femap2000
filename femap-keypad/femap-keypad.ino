@@ -151,7 +151,7 @@ int getUserInput() {
       if (buttonPressed) {
         previousReading = value;
         detectedKeyPress = value;
-        Serial.println(value);
+        // Serial.println(value);
       }
 
       delay(2);
