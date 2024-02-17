@@ -2,7 +2,7 @@
 
 ## What's this about
 
-This repository includes the software used in this [YouTube Video](https://youtu.be/...). It's part of a project, to make a mobile phone out of an 40 years old stationary phone, called FeTAp 0111 by Deutsche Post back in the days.
+This repository includes the software used in this [YouTube Video](https://www.youtube.com/watch?v=SiDBcjp981Q). It's part of a project, to make a mobile phone out of an 40 years old stationary phone, called FeTAp 0111 by Deutsche Post back in the days.
 
 
 ### License
